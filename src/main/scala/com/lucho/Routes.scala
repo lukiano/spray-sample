@@ -1,7 +1,7 @@
 package com.lucho
 
 import spray.routing.Directives
-import spray.http.{ContentType, HttpBody, HttpResponse}
+import spray.http._
 import akka.actor.{ActorSystem, ActorRef}
 import akka.pattern.ask
 import akka.util.Timeout
@@ -24,6 +24,11 @@ import com.lucho.models.PingBSON._
 import Stream._
 import org.joda.time.DateTime
 import play.api.libs.iteratee.{Enumerator, Iteratee}
+import spray.http.HttpResponse
+import com.lucho.models.Ping
+import reactivemongo.api.DefaultDB
+import reactivemongo.api.collections.default.BSONCollection
+import spray.http.HttpHeaders.RawHeader
 
 //F...ing implicits
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -42,6 +47,8 @@ trait Routes extends Directives {
   val db: DefaultDB
 
   val system: ActorSystem
+
+  val version = Project.version
 
   def routes: spray.routing.Route = {
     path("ping") {
@@ -72,6 +79,33 @@ trait Routes extends Directives {
             }
           }
         }
+    } ~
+    path("health-check") {
+      get {
+        complete {
+          val body = "{'status':'ok', 'version': '" + version + "'}"
+          val status = StatusCodes.OK
+          val entity = HttpBody(ContentType.`application/json`, body)
+          val headers = List(HttpHeaders.`Cache-Control`(CacheDirectives.`no-cache`),
+            RawHeader("no-gzip", "health-check-disabled-gzip"),
+            RawHeader("Expires", "0")
+          )
+          HttpResponse(status, entity, headers)
+        }
+      }
+    } ~
+    path ("version") {
+      get {
+        complete {
+          val status = StatusCodes.OK
+          val entity = HttpBody(ContentType.`application/json`, version)
+          val headers = List(HttpHeaders.`Cache-Control`(CacheDirectives.`no-cache`),
+            RawHeader("no-gzip", "health-check-disabled-gzip"),
+            RawHeader("Expires", "0")
+          )
+          HttpResponse(status, entity, headers)
+        }
+      }
     }
   }
 

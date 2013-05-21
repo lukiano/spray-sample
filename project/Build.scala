@@ -9,13 +9,15 @@ object Build extends sbt.Build {
   val scalazVersion = "7.0.0"
   val sprayVersion = "1.1-M7"
 
-  lazy val buildSettings = Defaults.defaultSettings ++ Seq(
+  lazy val buildSettings = Defaults.defaultSettings ++ seq(ReflectPlugin.allSettings:_*) ++
+    org.scalastyle.sbt.ScalastylePlugin.Settings ++ Seq(
     version := projectVersion,
     organization := "com.lucho",
     scalaVersion := "2.10.1",
     resolvers ++= Seq(
       "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
       "spray repo" at "http://repo.spray.io/",
+      "spray nightlies repo" at "http://nightlies.spray.io/",
       "Mark Schaake" at "http://markschaake.github.com/snapshots"
     ),
     logLevel := Level.Info,
@@ -37,7 +39,7 @@ object Build extends sbt.Build {
       "ch.qos.logback"           %   "logback-classic"   % "1.0.1",
       "joda-time"                %   "joda-time"         % "2.1",
       "org.joda"                 %   "joda-convert"      % "1.3",
-      "org.reactivemongo"        %%  "reactivemongo"     % "0.9",
+      "org.reactivemongo"        %%  "reactivemongo"     % "0.9" exclude("org.scala-stm", "scala-stm_2.10.0-"),
       "com.typesafe.akka"        %%  "akka-actor"        % akkaVersion,
       "com.typesafe.akka"        %%  "akka-dataflow"     % akkaVersion,
       "com.typesafe.akka"        %%  "akka-kernel"       % akkaVersion,
@@ -51,11 +53,16 @@ object Build extends sbt.Build {
       "org.spire-math"           %% "spire"              % "0.3.0"
     ),
 
-    shellPrompt  := ShellPrompt.buildShellPrompt
+    shellPrompt := ShellPrompt.buildShellPrompt,
+
+    ReflectPlugin.reflectPackage := "com.lucho",
+    ReflectPlugin.reflectClass := "Project",
+    sourceGenerators in Compile <+= ReflectPlugin.reflect map identity
   )
 
+
   lazy val root = Project(id = "spray-sample", base = file("."), settings = buildSettings ++ assemblySettings) settings(
-    // your settings here
+    net.virtualvoid.sbt.graph.Plugin.graphSettings: _*
   )
 
   // Shell prompt which show the current project,
